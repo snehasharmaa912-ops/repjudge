@@ -69,8 +69,8 @@ Built for the **MirAI School of Technology Capstone Program**.
 ## `> setup`
 
 ```bash
-git clone https://github.com/snehasharmaa912-ops/roast-my-form.git
-cd roast-my-form
+git clone https://github.com/snehasharmaa912-ops/repjudge.git
+cd repjudge
 pip install -r requirements.txt
 
 # add your key
@@ -83,7 +83,7 @@ streamlit run app.py
 ## `> deployment`
 
 Deployed on **Streamlit Community Cloud**.
-🔗 **Live app:** `<ADD_YOUR_LIVE_LINK_HERE>`
+🔗 **Live app:** https://repjudge-capstone.streamlit.app/
 
 To deploy your own copy:
 1. Push this repo to GitHub
