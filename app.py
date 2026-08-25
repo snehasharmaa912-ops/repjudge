@@ -25,29 +25,34 @@ PREFERRED_MODELS = [
     "gemini-1.5-flash",
 ]
 
-@st.cache_resource
-def resolve_model_name(api_key: str) -> str:
+def get_model_diagnostics(api_key: str):
+    """Returns (model_name_or_none, available_list, error_message)"""
     if not api_key:
-        return ""
-    genai.configure(api_key=api_key)
+        return None, [], "No API key provided."
     try:
-        available = {
+        genai.configure(api_key=api_key)
+        models = list(genai.list_models())
+        available = [
             m.name.replace("models/", "")
-            for m in genai.list_models()
+            for m in models
             if "generateContent" in m.supported_generation_methods
-        }
-    except Exception:
-        return PREFERRED_MODELS[0]
+        ]
+    except Exception as e:
+        return None, [], f"list_models() failed: {e}"
+
+    if not available:
+        return None, [], "list_models() succeeded but returned zero generateContent-capable models."
+
     for name in PREFERRED_MODELS:
         if name in available:
-            return name
-    return next(iter(available), PREFERRED_MODELS[0])
+            return name, available, None
+
+    return available[0], available, None
 
 if API_KEY:
-    genai.configure(api_key=API_KEY)
-    MODEL_NAME = resolve_model_name(API_KEY)
+    MODEL_NAME, AVAILABLE_MODELS, MODEL_ERROR = get_model_diagnostics(API_KEY)
 else:
-    MODEL_NAME = ""
+    MODEL_NAME, AVAILABLE_MODELS, MODEL_ERROR = None, [], "No API key set."
 
 EXERCISES = ["Pushup", "Squat"]
 
@@ -107,8 +112,8 @@ with one specific corrective cue for each ⚠️.
     if not MODEL_NAME:
         return {
             "score": 0,
-            "roast": "⚠️ No compatible Gemini model found for this API key.",
-            "breakdown": "Check that the Generative Language API is enabled for your Google Cloud project.",
+            "roast": f"⚠️ {MODEL_ERROR or 'No compatible Gemini model found.'}",
+            "breakdown": "Check API key validity and that the Generative Language API is enabled for your project.",
             "raw": "",
         }
 
@@ -147,8 +152,13 @@ with st.sidebar:
         st.write(f"- {cp}")
 
     st.divider()
-    if MODEL_NAME:
-        st.caption(f"Model in use: `{MODEL_NAME}`")
+    with st.expander("🔧 Model diagnostics", expanded=True):
+        if MODEL_NAME:
+            st.success(f"Using: `{MODEL_NAME}`")
+            st.caption(f"{len(AVAILABLE_MODELS)} models available to this key")
+        else:
+            st.error(MODEL_ERROR or "No model resolved.")
+
     st.caption("Built with Streamlit + Gemini Vision • MirAI School of Technology Capstone")
 
 # ---------------------------------------------------------
