@@ -155,7 +155,7 @@ with st.sidebar:
         st.write(f"- {cp}")
 
     st.divider()
-    with st.expander("🔧 Model diagnostics", expanded=True):
+    with st.expander("🔧 Model diagnostics", expanded=False):
         if MODEL_NAME:
             st.success(f"Using: `{MODEL_NAME}`")
             st.caption(f"{len(AVAILABLE_MODELS)} models available to this key")
