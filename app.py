@@ -22,6 +22,7 @@ PREFERRED_MODELS = [
     "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-flash-latest",
+    "gemini-1.5-flash",
 ]
 
 @st.cache_resource
@@ -30,8 +31,11 @@ def resolve_model_name(api_key: str) -> str:
         return ""
     genai.configure(api_key=api_key)
     try:
-        available = {m.name.replace("models/", "") for m in genai.list_models()
-                     if "generateContent" in m.supported_generation_methods}
+        available = {
+            m.name.replace("models/", "")
+            for m in genai.list_models()
+            if "generateContent" in m.supported_generation_methods
+        }
     except Exception:
         return PREFERRED_MODELS[0]
     for name in PREFERRED_MODELS:
@@ -56,7 +60,6 @@ CHECKPOINTS = {
 # SESSION STATE
 # ---------------------------------------------------------
 if "history" not in st.session_state:
-    # list of dicts: {timestamp, exercise, score, summary}
     st.session_state.history = []
 if "last_analysis" not in st.session_state:
     st.session_state.last_analysis = None
@@ -101,6 +104,14 @@ with one specific corrective cue for each ⚠️.
             "raw": "",
         }
 
+    if not MODEL_NAME:
+        return {
+            "score": 0,
+            "roast": "⚠️ No compatible Gemini model found for this API key.",
+            "breakdown": "Check that the Generative Language API is enabled for your Google Cloud project.",
+            "raw": "",
+        }
+
     model = genai.GenerativeModel(model_name=MODEL_NAME, system_instruction=system_prompt)
     response = model.generate_content([user_prompt, image])
     text = response.text
@@ -136,6 +147,8 @@ with st.sidebar:
         st.write(f"- {cp}")
 
     st.divider()
+    if MODEL_NAME:
+        st.caption(f"Model in use: `{MODEL_NAME}`")
     st.caption("Built with Streamlit + Gemini Vision • MirAI School of Technology Capstone")
 
 # ---------------------------------------------------------
