@@ -6,9 +6,6 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# ---------------------------------------------------------
-# CONFIG
-# ---------------------------------------------------------
 st.set_page_config(
     page_title="Roast My Form",
     page_icon="🏋️",
@@ -61,17 +58,11 @@ CHECKPOINTS = {
     "Squat": ["Foot stance", "Knee tracking", "Hip depth", "Back angle / spine neutrality", "Weight distribution"],
 }
 
-# ---------------------------------------------------------
-# SESSION STATE
-# ---------------------------------------------------------
 if "history" not in st.session_state:
     st.session_state.history = []
 if "last_analysis" not in st.session_state:
     st.session_state.last_analysis = None
 
-# ---------------------------------------------------------
-# GEMINI VISION CALL
-# ---------------------------------------------------------
 def analyze_form(image: Image.Image, exercise: str):
     checkpoints = ", ".join(CHECKPOINTS[exercise])
 
@@ -117,12 +108,20 @@ with one specific corrective cue for each ⚠️.
             "raw": "",
         }
 
-    response = CLIENT.models.generate_content(
-        model=MODEL_NAME,
-        contents=[user_prompt, image],
-        config=types.GenerateContentConfig(system_instruction=system_prompt),
-    )
-    text = response.text
+    try:
+        response = CLIENT.models.generate_content(
+            model=MODEL_NAME,
+            contents=[user_prompt, image],
+            config=types.GenerateContentConfig(system_instruction=system_prompt),
+        )
+        text = response.text
+    except Exception as e:
+        return {
+            "score": 0,
+            "roast": f"⚠️ Gemini couldn't process this request: {e}",
+            "breakdown": "Try again in a moment, or take a new photo — this is usually a transient API issue, not a bug in the app.",
+            "raw": "",
+        }
 
     score = 50
     for line in text.splitlines():
@@ -141,10 +140,6 @@ with one specific corrective cue for each ⚠️.
 
     return {"score": score, "roast": roast.strip(), "breakdown": breakdown, "raw": text}
 
-
-# ---------------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------------
 with st.sidebar:
     st.title("🏋️ Roast My Form")
     st.caption("Snap your starting posture. Get roasted. Get corrected.")
@@ -164,9 +159,7 @@ with st.sidebar:
 
     st.caption("Built with Streamlit + Gemini Vision • MirAI School of Technology Capstone")
 
-# ---------------------------------------------------------
-# MAIN
-# ---------------------------------------------------------
+
 st.title("Roast My Form")
 st.caption("AI-powered biomechanics feedback for your starting posture — no gym buddy required.")
 
