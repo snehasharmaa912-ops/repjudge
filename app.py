@@ -19,6 +19,7 @@ st.set_page_config(
 API_KEY = os.environ.get("GEMINI_API_KEY", st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else "")
 
 PREFERRED_MODELS = [
+    "gemini-3.6-flash",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
