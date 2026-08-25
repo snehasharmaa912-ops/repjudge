@@ -16,10 +16,34 @@ st.set_page_config(
 )
 
 API_KEY = os.environ.get("GEMINI_API_KEY", st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else "")
-MODEL_NAME = "gemini-2.5-flash"
+
+PREFERRED_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-flash-latest",
+]
+
+@st.cache_resource
+def resolve_model_name(api_key: str) -> str:
+    if not api_key:
+        return ""
+    genai.configure(api_key=api_key)
+    try:
+        available = {m.name.replace("models/", "") for m in genai.list_models()
+                     if "generateContent" in m.supported_generation_methods}
+    except Exception:
+        return PREFERRED_MODELS[0]
+    for name in PREFERRED_MODELS:
+        if name in available:
+            return name
+    return next(iter(available), PREFERRED_MODELS[0])
 
 if API_KEY:
     genai.configure(api_key=API_KEY)
+    MODEL_NAME = resolve_model_name(API_KEY)
+else:
+    MODEL_NAME = ""
 
 EXERCISES = ["Pushup", "Squat"]
 
