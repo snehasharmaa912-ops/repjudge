@@ -3,7 +3,8 @@ import pandas as pd
 import os
 from datetime import datetime
 from PIL import Image
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # ---------------------------------------------------------
 # CONFIG
@@ -22,26 +23,26 @@ PREFERRED_MODELS = [
     "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-flash-latest",
-    "gemini-1.5-flash",
 ]
 
-def get_model_diagnostics(api_key: str):
-    """Returns (model_name_or_none, available_list, error_message)"""
+@st.cache_resource
+def get_client(api_key: str):
     if not api_key:
+        return None
+    return genai.Client(api_key=api_key)
+
+def get_model_diagnostics(client):
+    """Returns (model_name_or_none, available_list, error_message)"""
+    if client is None:
         return None, [], "No API key provided."
     try:
-        genai.configure(api_key=api_key)
-        models = list(genai.list_models())
-        available = [
-            m.name.replace("models/", "")
-            for m in models
-            if "generateContent" in m.supported_generation_methods
-        ]
+        models = list(client.models.list())
+        available = [m.name.replace("models/", "") for m in models]
     except Exception as e:
-        return None, [], f"list_models() failed: {e}"
+        return None, [], f"models.list() failed: {e}"
 
     if not available:
-        return None, [], "list_models() succeeded but returned zero generateContent-capable models."
+        return None, [], "models.list() succeeded but returned zero models."
 
     for name in PREFERRED_MODELS:
         if name in available:
@@ -49,10 +50,8 @@ def get_model_diagnostics(api_key: str):
 
     return available[0], available, None
 
-if API_KEY:
-    MODEL_NAME, AVAILABLE_MODELS, MODEL_ERROR = get_model_diagnostics(API_KEY)
-else:
-    MODEL_NAME, AVAILABLE_MODELS, MODEL_ERROR = None, [], "No API key set."
+CLIENT = get_client(API_KEY)
+MODEL_NAME, AVAILABLE_MODELS, MODEL_ERROR = get_model_diagnostics(CLIENT)
 
 EXERCISES = ["Pushup", "Squat"]
 
@@ -101,7 +100,7 @@ A short bullet per checkpoint ({checkpoints}), marked ✅ if it looks correct or
 with one specific corrective cue for each ⚠️.
 """
 
-    if not API_KEY:
+    if CLIENT is None:
         return {
             "score": 0,
             "roast": "⚠️ No GEMINI_API_KEY found in environment/secrets — this is a placeholder response.",
@@ -117,8 +116,11 @@ with one specific corrective cue for each ⚠️.
             "raw": "",
         }
 
-    model = genai.GenerativeModel(model_name=MODEL_NAME, system_instruction=system_prompt)
-    response = model.generate_content([user_prompt, image])
+    response = CLIENT.models.generate_content(
+        model=MODEL_NAME,
+        contents=[user_prompt, image],
+        config=types.GenerateContentConfig(system_instruction=system_prompt),
+    )
     text = response.text
 
     score = 50
